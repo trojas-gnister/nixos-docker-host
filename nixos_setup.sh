@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "Available storage devices:"
 lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^vd|^nvme'
