@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
-# Check if fzf is installed, if not, prompt the user to install it
+# Check if fzf is installed, if not, install it using nix-env
 if ! command -v fzf &> /dev/null; then
-  echo "fzf is required but not installed. Please install fzf and try again."
-  exit 1
-fi
+  echo "fzf is not installed. Installing fzf..."
+  nix-env -iA nixos.fzf
+  if [ $? -ne 0 ]; then
+    echo "Failed to install fzf. Please ensure your Nix package manager is configured correctly."
+    exit 1
+  fi
 
 echo "Available storage devices:"
 DEVICE=$(lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^vd|^nvme' | fzf --prompt="Select a storage device: " | awk '{print $1}')
