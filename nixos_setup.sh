@@ -1,27 +1,40 @@
 #!/usr/bin/env bash
 
-echo "Available storage devices:"
-lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^vd|^nvme'
+# Check if fzf is installed, if not, prompt the user to install it
+if ! command -v fzf &> /dev/null; then
+  echo "fzf is required but not installed. Please install fzf and try again."
+  exit 1
+fi
 
-read -p "Enter the target device (e.g., sda, vda, nvme0n1): " DEVICE
+echo "Available storage devices:"
+DEVICE=$(lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^vd|^nvme' | fzf --prompt="Select a storage device: " | awk '{print $1}')
 
 # Confirm the device input
-if [ ! -b "/dev/$DEVICE" ]; then
-  echo "Error: /dev/$DEVICE is not a valid block device."
+if [ -z "$DEVICE" ]; then
+  echo "No device selected. Exiting."
   exit 1
+fi
+
+# Check for existing partitions
+if lsblk /dev/$DEVICE | grep -q 'part'; then
+  read -p "/dev/$DEVICE already has partitions. Do you want to delete everything and proceed? (yes/no): " CONFIRM
+  if [[ "$CONFIRM" != "yes" ]]; then
+    echo "Script is unable to proceed due to existing partitions on the device."
+    exit 1
+  else
+    echo "Deleting existing partitions on /dev/$DEVICE..."
+    # Use wipefs to remove existing partitions
+    wipefs --all /dev/$DEVICE
+    sgdisk --zap-all /dev/$DEVICE
+  fi
 fi
 
 echo "Proceeding to partition /dev/$DEVICE..."
 
-# Use cfdisk for partitioning
-cfdisk /dev/$DEVICE
-
-# Confirm partition layout with the user
-read -p "Ensure partitions are created as follows:
-1. Boot (512 MB, EFI System)
-2. Swap (4 GB, Linux swap)
-3. Root (remaining space, Linux filesystem)
-Press Enter to continue if partitions are correct, or Ctrl+C to cancel."
+# Automatically create partitions using sgdisk
+sgdisk -n 1:0:+512M -t 1:EF00 /dev/$DEVICE  # Boot partition (512 MB, EFI System)
+sgdisk -n 2:0:+4G -t 2:8200 /dev/$DEVICE    # Swap partition (4 GB, Linux swap)
+sgdisk -n 3:0:0 -t 3:8300 /dev/$DEVICE      # Root partition (remaining space, Linux filesystem)
 
 # Format partitions
 echo "Formatting partitions..."
