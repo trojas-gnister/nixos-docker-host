@@ -54,4 +54,24 @@ swapon /dev/${DEVICE}2
 echo "Generating NixOS configuration..."
 nixos-generate-config --root /mnt
 
-echo "Done! The partitions have been set up and mounted. You can now edit /mnt/etc/nixos/configuration.nix and proceed with the installation using 'nixos-install'."
+# Replace generated configuration.nix with the preconfigured one from the GitHub repository
+echo "Fetching preconfigured configuration.nix from the GitHub repository..."
+curl -o /mnt/etc/nixos/configuration.nix https://raw.githubusercontent.com/trojas-gnister/nixos-docker-host/main/configuration.nix
+
+if [ $? -ne 0 ]; then
+  echo "Failed to download configuration.nix. Please check the URL and your internet connection."
+  exit 1
+fi
+
+echo "Preconfigured configuration.nix has been downloaded and replaced."
+
+# Run the installation
+echo "Starting NixOS installation..."
+sudo nixos-install
+
+if [ $? -eq 0 ]; then
+  echo "NixOS installation completed successfully! You can now reboot your system."
+else
+  echo "NixOS installation encountered an error. Please check the output above for details."
+  exit 1
+fi
