@@ -7,7 +7,8 @@ if ! command -v fzf &> /dev/null; then
   if [ $? -ne 0 ]; then
     echo "Failed to install fzf. Please ensure your Nix package manager is configured correctly."
     exit 1
-  fi
+  fi  # <-- Missing 'fi' added here
+fi
 
 echo "Available storage devices:"
 DEVICE=$(lsblk -d -o NAME,SIZE,MODEL | grep -E '^sd|^vd|^nvme' | fzf --prompt="Select a storage device: " | awk '{print $1}')
